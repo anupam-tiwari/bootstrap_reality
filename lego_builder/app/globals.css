@@ -120,3 +120,118 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* LEGO Piece Styles */
+.lego-piece {
+  width: 60px;
+  height: 20px;
+  border-radius: 4px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  box-shadow: 
+    0 4px 8px rgba(0,0,0,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.3),
+    inset 0 -1px 0 rgba(0,0,0,0.3);
+  transition: all 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+.lego-piece::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 2px;
+  right: 2px;
+  height: 4px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.lego-piece::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 2px;
+  right: 2px;
+  height: 4px;
+  background: linear-gradient(to top, rgba(0,0,0,0.3), rgba(0,0,0,0.1));
+  border-radius: 2px;
+}
+
+.lego-piece:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 
+    0 8px 16px rgba(0,0,0,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.4),
+    inset 0 -1px 0 rgba(0,0,0,0.4);
+}
+
+/* LEGO Stud Styles */
+.lego-stud {
+  width: 8px;
+  height: 8px;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6), rgba(255,255,255,0.2));
+  border-radius: 50%;
+  box-shadow: 
+    inset 0 1px 2px rgba(0,0,0,0.3),
+    0 1px 1px rgba(0,0,0,0.2);
+  position: absolute;
+}
+
+/* 3D Scene Effects */
+.scene-3d {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+.piece-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease;
+}
+
+/* Animation for rotating pieces */
+@keyframes rotateY {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+
+.rotating {
+  animation: rotateY 4s linear infinite;
+}
+
+/* Grid layout for pieces */
+.pieces-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+/* Isometric view */
+.isometric-view {
+  transform: rotateX(15deg) rotateY(-15deg);
+  transform-style: preserve-3d;
+}
+
+/* List view */
+.list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.list-view .lego-piece {
+  width: 100%;
+  height: 40px;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 0 16px;
+}

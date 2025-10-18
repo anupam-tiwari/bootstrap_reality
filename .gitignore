@@ -1,0 +1,5 @@
+backend/.venv/
+lego_builder/.next/
+lego_builder/node_modules/
+*.env
+*.log
