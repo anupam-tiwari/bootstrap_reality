@@ -97,7 +97,7 @@ export default function AssetLibrary({ pieces, onPieceSelect, selectedPieces }) 
             <div
               key={piece.id}
               className={`
-                relative bg-white border-2 rounded-lg p-3 transition-all cursor-pointer
+                relative bg-white border-2 rounded-lg p-3 transition-all cursor-grab active:cursor-grabbing
                 ${isSelected(piece) 
                   ? 'border-blue-500 bg-blue-50' 
                   : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
@@ -105,6 +105,12 @@ export default function AssetLibrary({ pieces, onPieceSelect, selectedPieces }) 
                 ${viewMode === 'list' ? 'flex items-center space-x-3' : ''}
               `}
               onClick={() => handlePieceSelect(piece)}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', JSON.stringify({ pieceId: piece.id, source: 'library' }));
+              }}
+              title="Drag to 3D viewer to position"
             >
               {/* Piece Preview */}
               <div className={`

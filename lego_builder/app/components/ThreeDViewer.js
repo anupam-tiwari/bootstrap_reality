@@ -3,12 +3,26 @@
 import { useState, useEffect } from 'react';
 import { RotateCcw, ZoomIn, ZoomOut, Play, Pause, Move, RotateCw } from 'lucide-react';
 
-// Simple 3D LEGO Piece Component
-function LegoPiece({ piece, index, onSelect, isSelected, isRotating }) {
+// Simple 3D LEGO Piece Component with drag and drop support
+function LegoPiece({ piece, index, onSelect, isSelected, isRotating, position, onDragEnd }) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleClick = () => {
     onSelect(piece);
+  };
+
+  const handleDragStart = (e) => {
+    setIsDragging(true);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', JSON.stringify({ pieceId: piece.id, index }));
+  };
+
+  const handleDragEnd = (e) => {
+    setIsDragging(false);
+    if (onDragEnd) {
+      onDragEnd(e, piece);
+    }
   };
 
   const pieceStyle = {
@@ -27,12 +41,21 @@ function LegoPiece({ piece, index, onSelect, isSelected, isRotating }) {
       className="relative group"
       style={{
         perspective: '1000px',
-        transform: `translateZ(${index * 10}px)`,
+        transform: position ? `translate(${position.x}%, ${position.y}%)` : `translateZ(${index * 10}px)`,
+        position: position ? 'absolute' : 'relative',
+        zIndex: isDragging ? 1000 : 1,
+        cursor: isDragging ? 'grabbing' : 'grab',
       }}
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
       <div
         className="lego-piece"
-        style={pieceStyle}
+        style={{
+          ...pieceStyle,
+          opacity: isDragging ? 0.7 : 1,
+        }}
         onClick={handleClick}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -66,6 +89,7 @@ export default function ThreeDViewer({ pieces, onPieceSelect }) {
   const [isRotating, setIsRotating] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [viewMode, setViewMode] = useState('grid'); // grid, list, isometric
+  const [positionedPieces, setPositionedPieces] = useState({}); // Track piece positions for drag & drop
 
   const handlePieceSelect = (piece) => {
     const isSelected = selectedPieces.some(selected => selected.id === piece.id);
@@ -75,11 +99,6 @@ export default function ThreeDViewer({ pieces, onPieceSelect }) {
       setSelectedPieces(prev => [...prev, piece]);
     }
     onPieceSelect(piece);
-  };
-
-  const resetView = () => {
-    setSelectedPieces([]);
-    setZoom(1);
   };
 
   const toggleRotation = () => {
@@ -97,6 +116,49 @@ export default function ThreeDViewer({ pieces, onPieceSelect }) {
     const modes = ['grid', 'list', 'isometric'];
     const currentIndex = modes.indexOf(viewMode);
     setViewMode(modes[(currentIndex + 1) % modes.length]);
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    try {
+      const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+      const { pieceId } = dragData;
+      
+      const piece = pieces.find(p => p.id === pieceId);
+      if (piece) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        
+        setPositionedPieces(prev => ({
+          ...prev,
+          [pieceId]: { x, y }
+        }));
+        
+        // Auto-select the dropped piece
+        if (!selectedPieces.some(selected => selected.id === pieceId)) {
+          handlePieceSelect(piece);
+        }
+      }
+    } catch (error) {
+      console.error('Drag and drop error:', error);
+    }
+  };
+
+  const handlePieceDragEnd = (e, piece) => {
+    // This is handled by the drop event above
+  };
+
+  const resetView = () => {
+    setSelectedPieces([]);
+    setZoom(1);
+    setPositionedPieces({});
   };
 
   return (
@@ -155,6 +217,8 @@ export default function ThreeDViewer({ pieces, onPieceSelect }) {
           transform: `scale(${zoom})`,
           transformOrigin: 'center',
         }}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
         {pieces.length === 0 ? (
           <div className="w-full h-full flex items-center justify-center text-gray-500">
@@ -165,30 +229,53 @@ export default function ThreeDViewer({ pieces, onPieceSelect }) {
             </div>
           </div>
         ) : (
-          <div 
-            className={`w-full h-full p-4 ${
-              viewMode === 'grid' 
-                ? 'grid grid-cols-3 gap-4' 
-                : viewMode === 'list'
-                ? 'flex flex-col gap-2'
-                : 'flex flex-wrap gap-4 justify-center items-center'
-            }`}
-            style={{
-              perspective: viewMode === 'isometric' ? '1000px' : 'none',
-              transform: viewMode === 'isometric' ? 'rotateX(15deg) rotateY(-15deg)' : 'none',
-            }}
-          >
-            {pieces.map((piece, index) => (
-              <LegoPiece
-                key={piece.id}
-                piece={piece}
-                index={index}
-                onSelect={handlePieceSelect}
-                isSelected={selectedPieces.some(selected => selected.id === piece.id)}
-                isRotating={isRotating}
-              />
-            ))}
-          </div>
+          <>
+            {/* Grid Layout for non-positioned pieces */}
+            <div 
+              className={`w-full h-full p-4 ${
+                viewMode === 'grid' 
+                  ? 'grid grid-cols-3 gap-4' 
+                  : viewMode === 'list'
+                  ? 'flex flex-col gap-2'
+                  : 'flex flex-wrap gap-4 justify-center items-center'
+              }`}
+              style={{
+                perspective: viewMode === 'isometric' ? '1000px' : 'none',
+                transform: viewMode === 'isometric' ? 'rotateX(15deg) rotateY(-15deg)' : 'none',
+              }}
+            >
+              {pieces
+                .filter(piece => !positionedPieces[piece.id])
+                .map((piece, index) => (
+                  <LegoPiece
+                    key={piece.id}
+                    piece={piece}
+                    index={index}
+                    onSelect={handlePieceSelect}
+                    isSelected={selectedPieces.some(selected => selected.id === piece.id)}
+                    isRotating={isRotating}
+                    position={null}
+                    onDragEnd={handlePieceDragEnd}
+                  />
+                ))}
+            </div>
+            
+            {/* Positioned pieces for drag & drop */}
+            {pieces
+              .filter(piece => positionedPieces[piece.id])
+              .map((piece, index) => (
+                <LegoPiece
+                  key={`positioned-${piece.id}`}
+                  piece={piece}
+                  index={index}
+                  onSelect={handlePieceSelect}
+                  isSelected={selectedPieces.some(selected => selected.id === piece.id)}
+                  isRotating={isRotating}
+                  position={positionedPieces[piece.id]}
+                  onDragEnd={handlePieceDragEnd}
+                />
+              ))}
+          </>
         )}
 
         {/* Ground plane effect */}
@@ -221,6 +308,7 @@ export default function ThreeDViewer({ pieces, onPieceSelect }) {
         </div>
         <div className="space-y-1">
           <p>• Click pieces to select them</p>
+          <p>• Drag pieces from library to position them</p>
           <p>• Use controls to rotate, zoom, and change view</p>
         </div>
       </div>
